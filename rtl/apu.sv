@@ -1162,7 +1162,11 @@ module APUMixer (
 	input  logic  [3:0] triangle,
 	input  logic  [3:0] noise,
 	input  logic  [6:0] dmc,
-	output logic [15:0] sample
+	output logic [15:0] sample_square1,
+	output logic [15:0] sample_square2,
+	output logic [15:0] sample_triangle,
+	output logic [15:0] sample_noise,
+	output logic [15:0] sample_dmc
 );
 
 logic [15:0] pulse_lut[32];
@@ -1273,11 +1277,16 @@ assign mix_lut = '{
 	16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000
 };
 
-wire [4:0] squares = square1 + square2;
-wire [15:0] ch1 = pulse_lut[squares];
-wire [8:0] mix = tri_lut[triangle] + noise_lut[noise] + dmc_lut[dmc];
-wire [15:0] ch2 = mix_lut[mix];
+wire [15:0] ch1 = pulse_lut[square1];
+wire [15:0] ch2 = pulse_lut[square2];
+wire [15:0] ch3 = tri_lut[triangle];
+wire [15:0] ch4 = noise_lut[noise];
+wire [15:0] ch5 = dmc_lut[dmc];
 
-assign sample = ch1 + ch2;
+assign sample_ch1 = ch1;
+assign sample_ch2 = ch2;
+assign sample_ch3 = ch3;
+assign sample_ch4 = ch4;
+assign sample_ch5 = ch5;
 
 endmodule

@@ -78,7 +78,12 @@ module NES(
 	input   [1:0] sys_type,
 	output  [1:0] nes_div,
 	input  [63:0] mapper_flags,
-	output [15:0] sample,         // sample generated from APU
+//	output [15:0] sample,         // sample generated from APU
+	output [15:0] sample_square1, // generated from APU
+	output [15:0] sample_square2, // generated from APU
+	output [15:0] sample_triangle,// generated from APU
+	output [15:0] sample_noise,   // generated from APU
+	output [15:0] sample_dmc,     // generated from APU
 	output  [5:0] color,          // pixel generated from PPU
 	output  [1:0] joypad_clock,   // Set to 1 for each joypad to clock it.
 	output  [2:0] joypad_out,     // Set to 1 to strobe joypads. Then set to zero to keep the value.
@@ -130,7 +135,7 @@ module NES(
 	input         gg_reset,
 	output  [2:0] emphasis,
 	output        save_written,
-	
+
 	// savestates
 	output        mapper_has_savestate,
 	input         increaseSSHeaderCount,
@@ -139,17 +144,17 @@ module NES(
 	input  [1:0]  savestate_number,
 	output        sleep_savestate,
 	output        state_loaded,
-	
-	output [24:0] Savestate_SDRAMAddr,     
-	output        Savestate_SDRAMRdEn,    
-	output        Savestate_SDRAMWrEn,    
+
+	output [24:0] Savestate_SDRAMAddr,
+	output        Savestate_SDRAMRdEn,
+	output        Savestate_SDRAMWrEn,
 	output [7:0]  Savestate_SDRAMWriteData,
 	input  [7:0]  Savestate_SDRAMReadData,
-	
-	output [63:0] SaveStateExt_Din, 
-	output [9:0]  SaveStateExt_Adr, 
+
+	output [63:0] SaveStateExt_Din,
+	output [9:0]  SaveStateExt_Adr,
 	output        SaveStateExt_wren,
-	output        SaveStateExt_rst, 
+	output        SaveStateExt_rst,
 	input  [63:0] SaveStateExt_Dout,
 	output        SaveStateExt_load,
 
@@ -158,7 +163,7 @@ module NES(
 	output [25:0] SAVE_out_Adr,  	// all addresses are DWORD addresses!
 	output        SAVE_out_rnw,   // read = 1, write = 0
 	output        SAVE_out_ena,   // one cycle high for each action
-	output  [7:0] SAVE_out_be,     
+	output  [7:0] SAVE_out_be,
 	input         SAVE_out_done   // should be one cycle high when write is done or read value is valid
 );
 
@@ -320,10 +325,10 @@ always @(posedge clk) begin
 		div_sys <= 0;
 		cpu_tick_count <= 0;
 	end
-	
+
 	// pause
 	if (ppu_ce_pause) skip_pause_ce <= 0; // must skip the first CE after pause to sync back to correct ppu
-	
+
 	if (reset_nes) begin
 		corepause_active       <= 0;
 		corepause_active_delay <= 0;
@@ -336,15 +341,15 @@ always @(posedge clk) begin
 			corepause_active  <= 1;
 			div_ppu_pause     <= div_ppu + 3'd1;
 		end
-		
+
 		if (corepause_active) begin
-			
+
 			if (corepause_delay < 8'hFF) begin
 				corepause_delay <= corepause_delay + 1'd1;
 			end else begin
 				corepause_active_delay <= 1;
 			end
-			
+
 			if (~freeze_clocks | ~(div_ppu_pause == (div_ppu_n - 1'b1))) begin
 				div_ppu_pause <= ppu_ce_pause ? 3'd1 : div_ppu_pause + 3'd1;
 				if (~pausecore && ppu_ce_pause && (cycle_paused == ppu_cycle) && (scanline_paused == scanline_ppu) && (evenframe == evenframe_paused)) begin
@@ -357,7 +362,7 @@ always @(posedge clk) begin
 			corepause_delay <= 8'd0;
 		end
 	end
-	
+
 end
 
 assign SS_TOP_BACK[0] = odd_or_even;
@@ -413,11 +418,11 @@ T65 cpu(
 	.A      (cpu_addr),
 	.DI     (cpu_rnw ? from_data_bus : cpu_dout),
 	.DO     (cpu_dout),
-	
+
 	.Instrnew (cpu_Instrnew),
-	
+
 	// savestates
-	.SaveStateBus_Din  (SaveStateBus_Din ), 
+	.SaveStateBus_Din  (SaveStateBus_Din ),
 	.SaveStateBus_Adr  (SaveStateBus_Adr ),
 	.SaveStateBus_wren (SaveStateBus_wren),
 	.SaveStateBus_rst  (SaveStateBus_rst ),
@@ -488,7 +493,7 @@ APU apu(
 	.odd_or_even    (odd_or_even),
 	.IRQ            (apu_irq),
 	// savestates
-	.SaveStateBus_Din  (SaveStateBus_Din ), 
+	.SaveStateBus_Din  (SaveStateBus_Din ),
 	.SaveStateBus_Adr  (SaveStateBus_Adr ),
 	.SaveStateBus_wren (SaveStateBus_wren),
 	.SaveStateBus_rst  (SaveStateBus_rst ),
@@ -580,15 +585,15 @@ PPU ppu(
 	.render_ena_out   (render_ena),
 	.evenframe			(evenframe),
 	// savestates
-	.SaveStateBus_Din       (SaveStateBus_Din        ), 
+	.SaveStateBus_Din       (SaveStateBus_Din        ),
 	.SaveStateBus_Adr       (SaveStateBus_Adr        ),
 	.SaveStateBus_wren      (SaveStateBus_wren       ),
 	.SaveStateBus_rst       (SaveStateBus_rst        ),
 	.SaveStateBus_load      (loading_savestate       ),
 	.SaveStateBus_Dout      (SaveStateBus_wired_or[2]),
-	.Savestate_OAMAddr      (Savestate_OAMAddr       ),     
-	.Savestate_OAMRdEn      (Savestate_OAMRdEn       ),    
-	.Savestate_OAMWrEn      (Savestate_OAMWrEn       ),    
+	.Savestate_OAMAddr      (Savestate_OAMAddr       ),
+	.Savestate_OAMRdEn      (Savestate_OAMRdEn       ),
+	.Savestate_OAMWrEn      (Savestate_OAMWrEn       ),
 	.Savestate_OAMWriteData (Savestate_OAMWriteData  ),
 	.Savestate_OAMReadData  (Savestate_OAMReadData   )
 );
@@ -668,13 +673,13 @@ cart_top multi_mapper (
 	.fds_auto_eject    (fds_auto_eject),
 
 	// savestates
-	.SaveStateBus_Din  (SaveStateBus_Din ), 
+	.SaveStateBus_Din  (SaveStateBus_Din ),
 	.SaveStateBus_Adr  (SaveStateBus_Adr ),
 	.SaveStateBus_wren (SaveStateBus_wren),
 	.SaveStateBus_rst  (SaveStateBus_rst ),
 	.SaveStateBus_load (loading_savestate ),
 	.SaveStateBus_Dout (SaveStateBus_wired_or[3]),
-	
+
 	.Savestate_MAPRAMactive   (Savestate_MAPRAMactive),
 	.Savestate_MAPRAMAddr     (Savestate_MAPRAMAddr),
 	.Savestate_MAPRAMRdEn     (Savestate_MAPRAMRdEn),
@@ -761,7 +766,7 @@ assign SS_TOP_BACK[63:17] = 47'b0; // free to be used
 wire [63:0] SaveStateBus_Din;
 wire [9:0] SaveStateBus_Adr;
 wire SaveStateBus_wren, SaveStateBus_rst;
-  
+
 wire [7:0]  Savestate_RAMWriteData;
 wire [7:0]  Savestate_RAMReadData;
 wire [24:0] Savestate_RAMAddr;
@@ -777,14 +782,14 @@ wire reset_delay;
 wire savestate_savestate;
 wire savestate_loadstate;
 wire [31:0] savestate_address;
-wire savestate_busy;  
+wire savestate_busy;
 
 wire [63:0] SS_TOP;
-wire [63:0] SS_TOP_BACK;	
-eReg_SavestateV #(SSREG_INDEX_TOP, SSREG_DEFAULT_TOP) iREG_SAVESTATE_TOP (clk, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, SaveStateBus_wired_or[4], SS_TOP_BACK, SS_TOP);  
+wire [63:0] SS_TOP_BACK;
+eReg_SavestateV #(SSREG_INDEX_TOP, SSREG_DEFAULT_TOP) iREG_SAVESTATE_TOP (clk, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, SaveStateBus_wired_or[4], SS_TOP_BACK, SS_TOP);
 
 wire [63:0] SaveStateBus_Dout  = SaveStateBus_wired_or[0] | SaveStateBus_wired_or[1] | SaveStateBus_wired_or[2] | SaveStateBus_wired_or[3] | SaveStateBus_wired_or[4] | SaveStateExt_Dout;
- 
+
 wire loading_savestate;
 wire saving_savestate;
 wire sleep_savestates;
@@ -808,7 +813,7 @@ wire        Savestate_MAPRAMWrEn      = Savestate_RAMWrEn && (Savestate_RAMType 
 wire [7:0]  Savestate_MAPRAMWriteData = Savestate_RAMWriteData;
 wire [7:0]  Savestate_MAPRAMReadData;
 
-assign Savestate_RAMReadData = (Savestate_RAMType == 0) ? Savestate_OAMReadData : 
+assign Savestate_RAMReadData = (Savestate_RAMType == 0) ? Savestate_OAMReadData :
 										 (Savestate_RAMType == 1) ? Savestate_MAPRAMReadData :
 										 Savestate_SDRAMReadData;
 
@@ -818,67 +823,67 @@ assign SaveStateExt_wren = SaveStateBus_wren;
 assign SaveStateExt_rst  = SaveStateBus_rst;
 assign SaveStateExt_load = loading_savestate;
 
- 
+
 savestates savestates (
 	.clk                    (clk),
 	.reset_in               (reset_nes),
 	.reset_ss               (reset_ss),
 	.reset_delay            (reset_delay),
-	
+
 	.load_done              (state_loaded),
-	
+
 	.increaseSSHeaderCount  (increaseSSHeaderCount),
 	.save                   (savestate_savestate),
 	.load                   (savestate_loadstate),
 	.savestate_address      (savestate_address),
-	.savestate_busy         (savestate_busy),      
-	
+	.savestate_busy         (savestate_busy),
+
 	.paused                 (corepause_active_delay),
-	
-	.BUS_Din                (SaveStateBus_Din), 
-	.BUS_Adr                (SaveStateBus_Adr), 
-	.BUS_wren               (SaveStateBus_wren), 
-	.BUS_rst                (SaveStateBus_rst), 
+
+	.BUS_Din                (SaveStateBus_Din),
+	.BUS_Adr                (SaveStateBus_Adr),
+	.BUS_wren               (SaveStateBus_wren),
+	.BUS_rst                (SaveStateBus_rst),
 	.BUS_Dout               (SaveStateBus_Dout),
-		
+
 	.loading_savestate      (loading_savestate),
 	.saving_savestate       (saving_savestate),
 	.sleep_savestate        (sleep_savestates),
-	
-	.Save_RAMAddr           (Savestate_RAMAddr),     
-	.Save_RAMRdEn           (Savestate_RAMRdEn),           
-	.Save_RAMWrEn           (Savestate_RAMWrEn),           
-	.Save_RAMWriteData      (Savestate_RAMWriteData),   
+
+	.Save_RAMAddr           (Savestate_RAMAddr),
+	.Save_RAMRdEn           (Savestate_RAMRdEn),
+	.Save_RAMWrEn           (Savestate_RAMWrEn),
+	.Save_RAMWriteData      (Savestate_RAMWriteData),
 	.Save_RAMReadData       (Savestate_RAMReadData),
 	.Save_RAMType           (Savestate_RAMType),
-				
-	.bus_out_Din            (SAVE_out_Din),   
-	.bus_out_Dout           (SAVE_out_Dout),  
-	.bus_out_Adr            (SAVE_out_Adr),   
-	.bus_out_rnw            (SAVE_out_rnw),   
-	.bus_out_ena            (SAVE_out_ena),   
-	.bus_out_be             (SAVE_out_be),   
-	.bus_out_done           (SAVE_out_done)  
+
+	.bus_out_Din            (SAVE_out_Din),
+	.bus_out_Dout           (SAVE_out_Dout),
+	.bus_out_Adr            (SAVE_out_Adr),
+	.bus_out_rnw            (SAVE_out_rnw),
+	.bus_out_ena            (SAVE_out_ena),
+	.bus_out_be             (SAVE_out_be),
+	.bus_out_done           (SAVE_out_done)
 );
 
 statemanager #(58720256, 33554432) statemanager (
 	.clk                 (clk),
 	.reset               (reset_nes),
-	
-	.rewind_on           (1'b0),    
+
+	.rewind_on           (1'b0),
 	.rewind_active       (1'b0),
-	
+
 	.savestate_number    (savestate_number),
 	.save                (save_state),
 	.load                (load_state),
-	
+
 	.sleep_rewind        (sleep_rewind),
-	.vsync               (1'b0),       
-	
+	.vsync               (1'b0),
+
 	.request_savestate   (savestate_savestate),
 	.request_loadstate   (savestate_loadstate),
-	.request_address     (savestate_address),  
-	.request_busy        (savestate_busy)     
+	.request_address     (savestate_address),
+	.request_busy        (savestate_busy)
 );
 
 assign sleep_savestate = sleep_rewind | sleep_savestates;

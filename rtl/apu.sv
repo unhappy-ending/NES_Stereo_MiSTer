@@ -1277,16 +1277,19 @@ assign mix_lut = '{
 	16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000, 16'h0000
 };
 
-// wire [15:0] ch1 = pulse_lut[square1];
-// wire [15:0] ch2 = pulse_lut[square2];
-// wire [15:0] ch3 = tri_lut[triangle];
-// wire [15:0] ch4 = noise_lut[noise];
-// wire [15:0] ch5 = dmc_lut[dmc];
+// wire [4:0] squares = square1 + square2;
+// wire [15:0] ch1 = pulse_lut[squares];
+// wire [8:0] mix = tri_lut[triangle] + noise_lut[noise] + dmc_lut[dmc];
+// wire [15:0] ch2 = mix_lut[mix];
+
+wire [8:0] wire_triangle = tri_lut[triangle];
+wire [8:0] wire_noise = noise_lut[noise];
+wire [8:0] wire_dmc = dmc_lut[dmc];
 
 assign sample_square1 = pulse_lut[square1];
 assign sample_square2 = pulse_lut[square2];
-assign sample_triangle = tri_lut[triangle];
-assign sample_noise = noise_lut[noise];
-assign sample_dmc = dmc_lut[dmc];
+assign sample_triangle = mix_lut[wire_triangle];
+assign sample_noise = mix_lut[wire_noise];
+assign sample_dmc = mix_lut[wire_dmc];
 
 endmodule

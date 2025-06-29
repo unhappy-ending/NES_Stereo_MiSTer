@@ -1281,15 +1281,16 @@ assign mix_lut = '{
 // wire [15:0] ch1 = pulse_lut[squares];
 // wire [8:0] mix = tri_lut[triangle] + noise_lut[noise] + dmc_lut[dmc];
 // wire [15:0] ch2 = mix_lut[mix];
+wire [4:0] channel_square1 = {square1, 1'b0}; // pulse_lut expects a 5 bit signal
+wire [4:0] channel_square2 = {square2, 1'b0}; // pulse_lut expects a 5 bit signal
+wire [8:0] channel_triangle = {tri_lut[triangle], 3'd0}; // mix_lut expects a 9 bit signal
+wire [8:0] channel_noise = {noise_lut[noise], 3'd0}; // mix_lut expects a 9 bit signal
+wire [8:0] channel_dmc = dmc_lut[dmc];
 
-wire [8:0] wire_triangle = tri_lut[triangle];
-wire [8:0] wire_noise = noise_lut[noise];
-wire [8:0] wire_dmc = dmc_lut[dmc];
-
-assign sample_square1 = pulse_lut[square1];
-assign sample_square2 = pulse_lut[square2];
-assign sample_triangle = mix_lut[wire_triangle];
-assign sample_noise = mix_lut[wire_noise];
-assign sample_dmc = mix_lut[wire_dmc];
+assign sample_square1 = pulse_lut[channel_square1];
+assign sample_square2 = pulse_lut[channel_square2];
+assign sample_triangle = mix_lut[channel_triangle];
+assign sample_noise = mix_lut[channel_noise];
+assign sample_dmc = mix_lut[channel_dmc];
 
 endmodule
